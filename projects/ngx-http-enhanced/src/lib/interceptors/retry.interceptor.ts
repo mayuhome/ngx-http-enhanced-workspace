@@ -4,13 +4,14 @@ import { Observable } from 'rxjs';
 import { retryWhen, delayWhen, take, mergeMap } from 'rxjs/operators';
 import { timer, throwError, of } from 'rxjs';
 import { HttpEnhancedConfig } from '../core/config.interface';
+import { HTTP_ENHANCED_CONFIG } from '../core/http-enhanced.service';
 import { defaultRetryStrategy } from '../core/strategies/retry.strategy';
 
 @Injectable()
 export class RetryInterceptor implements HttpInterceptor {
   private strategy: HttpEnhancedConfig['retryStrategy'];
 
-  constructor(@Optional() @Inject('HTTP_ENHANCED_CONFIG') private config?: HttpEnhancedConfig) {
+  constructor(@Optional() @Inject(HTTP_ENHANCED_CONFIG) private config?: HttpEnhancedConfig) {
     this.strategy = { ...defaultRetryStrategy, ...(config?.retryStrategy || {}) };
   }
 

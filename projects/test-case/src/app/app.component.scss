@@ -1,0 +1,64 @@
+.container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+      font-family: Arial, sans-serif;
+    }
+    .section {
+      margin: 30px 0;
+      padding: 20px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      background: #f9f9f9;
+    }
+    button {
+      padding: 10px 20px;
+      margin: 5px;
+      background: #007bff;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #0056b3;
+    }
+    .result {
+      margin-top: 15px;
+      padding: 15px;
+      background: #e7f3ff;
+      border-radius: 4px;
+    }
+    .error {
+      margin-top: 15px;
+      padding: 15px;
+      background: #ffe7e7;
+      border-radius: 4px;
+      color: #d32f2f;
+    }
+    .post {
+      padding: 8px;
+      margin: 5px 0;
+      background: white;
+      border-radius: 4px;
+    }
+    .logs {
+      margin-top: 30px;
+      padding: 15px;
+      background: #f5f5f5;
+      border-radius: 8px;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    .log-entry {
+      padding: 5px;
+      border-bottom: 1px solid #ddd;
+      font-family: monospace;
+      font-size: 12px;
+    }
+    pre {
+      background: white;
+      padding: 10px;
+      border-radius: 4px;
+      overflow-x: auto;
+    }

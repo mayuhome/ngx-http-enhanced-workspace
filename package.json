@@ -8,7 +8,9 @@
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
     "build:lib": "ng build ngx-http-enhanced --configuration production",
-    "test:lib": "ng test ngx-http-enhanced"
+    "test:lib": "ng test ngx-http-enhanced",
+    "start:test": "ng serve test-case",
+    "build:test": "ng build test-case"
   },
   "private": true,
   "dependencies": {

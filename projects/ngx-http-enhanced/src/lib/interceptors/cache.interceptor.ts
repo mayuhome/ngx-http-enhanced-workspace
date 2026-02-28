@@ -3,6 +3,7 @@ import { Inject, Injectable, Optional } from '@angular/core';
 import { Observable, of } from 'rxjs';
 import { tap, shareReplay } from 'rxjs/operators';
 import { HttpEnhancedConfig } from '../core/config.interface';
+import { HTTP_ENHANCED_CONFIG } from '../core/http-enhanced.service';
 import { defaultCacheStrategy } from '../core/strategies/cache.strategy';
 
 const cache = new Map<string, { value: HttpResponse<any>, expiry: number }>();
@@ -10,7 +11,7 @@ const cache = new Map<string, { value: HttpResponse<any>, expiry: number }>();
 @Injectable()
 export class CacheInterceptor implements HttpInterceptor {
   private strategy: HttpEnhancedConfig['cacheStrategy'];
-constructor(@Optional() @Inject('HTTP_ENHANCED_CONFIG') private config?: HttpEnhancedConfig) {
+constructor(@Optional() @Inject(HTTP_ENHANCED_CONFIG) private config?: HttpEnhancedConfig) {
     this.strategy = { ...defaultCacheStrategy, ...(config?.cacheStrategy || {}) };
   }
 intercept(req: HttpRequest<any>, next: HttpHandler): Observable<HttpEvent<any>> {

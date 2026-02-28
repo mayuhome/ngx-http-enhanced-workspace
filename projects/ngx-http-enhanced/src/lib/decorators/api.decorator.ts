@@ -1,5 +1,6 @@
 import "reflect-metadata";
 import { HttpEnhancedService } from '../core/http-enhanced.service';
+import { Observable } from 'rxjs';
 
 // 类型定义（可选，但推荐增强类型安全）
 type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
@@ -50,20 +51,35 @@ function HttpDecoratorFactory<R = any>(method: HttpMethod) {
         // 根据方法调用对应的 http 方法
         const options = args[args.length - 1]; // 最后一个参数通常是 options
 
+        let observable: Observable<R>;
+
         switch (method) {
           case 'GET':
-            return service.http.get<R>(url, options);
+            observable = service.http.get<R>(url, options);
+            break;
           case 'POST':
-            return service.http.post<R>(url, args[0], options);
+            observable = service.http.post<R>(url, args[0], options);
+            break;
           case 'PUT':
-            return service.http.put<R>(url, args[0], options);
+            observable = service.http.put<R>(url, args[0], options);
+            break;
           case 'PATCH':
-            return service.http.patch<R>(url, args[0], options);
+            observable = service.http.patch<R>(url, args[0], options);
+            break;
           case 'DELETE':
-            return service.http.delete<R>(url, options);
+            observable = service.http.delete<R>(url, options);
+            break;
           default:
             throw new Error(`Unsupported HTTP method: ${method}`);
         }
+        // 关键：如果原始方法存在，就让它处理 observable
+        if (typeof originalMethod === 'function') {
+          // 原函数接收 observable 作为参数，返回新的 observable 或其他值
+          return originalMethod.call(self, observable, ...args);
+        }
+
+        // 如果没有原始函数体，直接返回 observable
+        return observable;
       };
 
       return descriptor;
