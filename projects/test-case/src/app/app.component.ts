@@ -1,6 +1,5 @@
-import { CommonModule } from '@angular/common';
+import { CommonModule, JsonPipe } from '@angular/common';
 import { Component } from '@angular/core';
-import { RouterOutlet } from '@angular/router';
 import { HttpEnhancedService } from 'ngx-http-enhanced';
 
 interface Post {
@@ -18,7 +17,7 @@ interface User {
 
 @Component({
   selector: 'app-root',
-  imports: [CommonModule],
+  imports: [JsonPipe],
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss'
 })

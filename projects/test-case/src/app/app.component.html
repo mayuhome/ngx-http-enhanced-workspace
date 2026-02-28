@@ -4,80 +4,100 @@
       <div class="section">
         <h2>1. 基础 GET 请求测试</h2>
         <button (click)="testGet()">获取文章列表</button>
-        <div *ngIf="posts.length > 0" class="result">
-          <h3>结果:</h3>
-          <div *ngFor="let post of posts" class="post">
-            <strong>{{ post.id }}:</strong> {{ post.title }}
+        @if (posts.length > 0) {
+          <div class="result">
+            <h3>结果:</h3>
+            @for (post of posts; track post.id) {
+            <div class="post">
+              <strong>{{ post.id }}:</strong> {{ post.title }}
+            </div>
+            }
           </div>
-        </div>
+        }
       </div>
 
       <div class="section">
         <h2>2. POST 请求测试</h2>
         <button (click)="testPost()">创建新文章</button>
-        <div *ngIf="createdPost" class="result">
-          <h3>创建成功:</h3>
-          <pre>{{ createdPost | json }}</pre>
-        </div>
+        @if (createdPost) {
+          <div class="result">
+            <h3>创建成功:</h3>
+            <pre>{{ createdPost | json }}</pre>
+          </div>
+        }
       </div>
 
       <div class="section">
         <h2>3. PUT 请求测试</h2>
         <button (click)="testPut()">更新文章</button>
-        <div *ngIf="updatedPost" class="result">
-          <h3>更新成功:</h3>
-          <pre>{{ updatedPost | json }}</pre>
-        </div>
+        @if (updatedPost) {
+          <div class="result">
+            <h3>更新成功:</h3>
+            <pre>{{ updatedPost | json }}</pre>
+          </div>
+        }
       </div>
 
       <div class="section">
         <h2>4. DELETE 请求测试</h2>
         <button (click)="testDelete()">删除文章</button>
-        <div *ngIf="deleteResult" class="result">
-          <h3>删除结果:</h3>
-          <pre>{{ deleteResult | json }}</pre>
-        </div>
+        @if (deleteResult) {
+          <div class="result">
+            <h3>删除结果:</h3>
+            <pre>{{ deleteResult | json }}</pre>
+          </div>
+        }
       </div>
 
       <div class="section">
         <h2>5. PATCH 请求测试</h2>
         <button (click)="testPatch()">部分更新文章</button>
-        <div *ngIf="patchedPost" class="result">
-          <h3>部分更新成功:</h3>
-          <pre>{{ patchedPost | json }}</pre>
-        </div>
+        @if (patchedPost) {
+          <div class="result">
+            <h3>部分更新成功:</h3>
+            <pre>{{ patchedPost | json }}</pre>
+          </div>
+        }
       </div>
 
       <div class="section">
         <h2>6. 错误处理测试</h2>
         <button (click)="testError()">触发错误</button>
-        <div *ngIf="errorMessage" class="error">
-          <h3>错误信息:</h3>
-          <p>{{ errorMessage }}</p>
-        </div>
+        @if (errorMessage) {
+          <div class="error">
+            <h3>错误信息:</h3>
+            <p>{{ errorMessage }}</p>
+          </div>
+        }
       </div>
 
       <div class="section">
         <h2>7. 缓存测试</h2>
         <button (click)="testCache()">获取用户信息 (带缓存)</button>
         <button (click)="testCache()">再次获取 (应该使用缓存)</button>
-        <div *ngIf="user" class="result">
-          <h3>用户信息:</h3>
-          <pre>{{ user | json }}</pre>
-        </div>
+        @if (user) {
+          <div class="result">
+            <h3>用户信息:</h3>
+            <pre>{{ user | json }}</pre>
+          </div>
+        }
       </div>
 
       <div class="section">
         <h2>8. 去重测试</h2>
         <button (click)="testDeduplicate()">同时发起多个相同请求</button>
-        <div *ngIf="deduplicateResult" class="result">
-          <h3>去重结果:</h3>
-          <pre>{{ deduplicateResult | json }}</pre>
-        </div>
+        @if (deduplicateResult) {
+          <div class="result">
+            <h3>去重结果:</h3>
+            <pre>{{ deduplicateResult | json }}</pre>
+          </div>
+        }
       </div>
 
       <div class="logs">
         <h3>控制台日志:</h3>
-        <div *ngFor="let log of logs" class="log-entry">{{ log }}</div>
+        @for (log of logs; track log) {
+          <div class="log-entry">{{ log }}</div>
+        }
       </div>
     </div>
