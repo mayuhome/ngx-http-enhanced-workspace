@@ -17,35 +17,35 @@ export class HttpEnhancedService<T = any> {
   }
 
   get<R = T>(url: string, options: {
-  observe?: 'body';   // 只允许 'body' 或不传
+  observe?: 'body';   // Only allow 'body' or undefined
   [key: string]: any;
-} = {}): Observable<R> {  // 泛型响应
+} = {}): Observable<R> {  // Generic response
     return this.http.get<R>(url, options);
   }
 
   post<R = T>(url: string, body?: any, options: {
-  observe?: 'body';   // 只允许 'body' 或不传
+  observe?: 'body';   // Only allow 'body' or undefined
   [key: string]: any;
 } = {}): Observable<R> {
     return this.http.post<R>(url, body, options);
   }
 
   put<R = T>(url: string, body?: any, options: {
-  observe?: 'body';   // 只允许 'body' 或不传
+  observe?: 'body';   // Only allow 'body' or undefined
   [key: string]: any;
 } = {}): Observable<R> {
     return this.http.put<R>(url, body, options);
   }
 
   delete<R = T>(url: string, options: {
-  observe?: 'body';   // 只允许 'body' 或不传
+  observe?: 'body';   // Only allow 'body' or undefined
   [key: string]: any;
 } = {}): Observable<R> {
     return this.http.delete<R>(url, options);
   }
 
   patch<R = T>(url: string, body?: any, options: {
-  observe?: 'body';   // 只允许 'body' 或不传
+  observe?: 'body';   // Only allow 'body' or undefined
   [key: string]: any;
 } = {}): Observable<R> {
     return this.http.patch<R>(url, body, options);

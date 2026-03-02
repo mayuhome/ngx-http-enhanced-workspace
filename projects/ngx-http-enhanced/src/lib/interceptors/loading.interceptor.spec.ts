@@ -56,7 +56,7 @@ describe('LoadingInterceptor', () => {
     const req = httpMock.expectOne('https://api.test.com/data');
     req.flush(testData);
 
-    tick(); // 确保所有异步操作完成
+    tick(); // Ensure all async operations complete
 
     expect(responseReceived).toBeTrue();
     expect(onStartSpy).toHaveBeenCalled();
@@ -72,7 +72,7 @@ describe('LoadingInterceptor', () => {
     const req = httpMock.expectOne('https://api.test.com/data');
     req.flush('Test error', { status: 500, statusText: 'Internal Server Error' });
 
-    tick(); // 确保所有异步操作完成
+    tick(); // Ensure all async operations complete
     expect(onStartSpy).toHaveBeenCalled();
     expect(onEndSpy).toHaveBeenCalled();
 

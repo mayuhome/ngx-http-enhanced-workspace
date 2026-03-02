@@ -94,7 +94,7 @@ describe('RetryInterceptor', () => {
         tick(100);
       }
     } catch (e) {
-      // 当达到最大重试次数后，请求可能会被取消
+      // When max retries are reached, the request may be cancelled
       break;
     }
     }

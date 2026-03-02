@@ -17,7 +17,7 @@ export class LoadingInterceptor implements HttpInterceptor {
       return next.handle(req);
     }
 
-    this.strategy?.onStart(); // 可插拔：基于 config.strategy 来判断是否显示 loading
+    this.strategy?.onStart(); // Pluggable: determine whether to show loading based on config.strategy
 
     return next.handle(req).pipe(
       finalize(() => {

@@ -17,7 +17,7 @@ export class ErrorInterceptor implements HttpInterceptor {
   intercept(req: HttpRequest<any>, next: HttpHandler): Observable<HttpEvent<any>> {
     return next.handle(req).pipe(
       catchError(err => {
-        this.strategy?.handleError?.(err);  // 可插拔：基于 config.strategy 来处理错误
+        this.strategy?.handleError?.(err);  // Pluggable: handle errors based on config.strategy
         return throwError(() => err);
       })
     );

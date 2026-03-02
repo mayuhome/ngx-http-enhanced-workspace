@@ -1,12 +1,12 @@
-// 核心模块和服务
+// Core modules and services
 export * from './lib/core/http-enhanced.module';
 export * from './lib/core/http-enhanced.service';
 export * from './lib/core/config.interface';
 
-// 装饰器（最常用入口之一）
+// Decorators (one of the most common entry points)
 // export * from './lib/decorators/api.decorator';
 
-// 可选：如果用户想单独使用某个 interceptor（高级用法）
+// Optional: if users want to use a specific interceptor individually (advanced usage)
 export * from './lib/interceptors/loading.interceptor';
 export * from './lib/interceptors/error.interceptor';
 export * from './lib/interceptors/cache.interceptor';

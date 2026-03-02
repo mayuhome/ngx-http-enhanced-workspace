@@ -84,27 +84,27 @@ describe('DeduplicateInterceptor', () => {
     let getResponseReceived = false;
     let postResponseReceived = false;
 
-    // 发送GET请求
+    // Send GET request
     http.get<any>('https://api.test.com/data').subscribe(data => {
       expect(data).toEqual(testData);
       getResponseReceived = true;
     });
 
-    // 发送POST请求到相同URL
+    // Send POST request to same URL
     http.post<any>('https://api.test.com/data', testData).subscribe(data => {
       expect(data).toEqual(testData);
       postResponseReceived = true;
     });
 
-    // 验证GET请求被发出
+    // Verify GET request was sent
     const getReq = httpMock.expectOne(req => req.url === 'https://api.test.com/data' && req.method === 'GET');
     getReq.flush(testData);
 
-    // 验证POST请求也被发出（不应该被去重）
+    // Verify POST request was also sent (should not be deduplicated)
     const postReq = httpMock.expectOne(req => req.url === 'https://api.test.com/data' && req.method === 'POST');
     postReq.flush(testData);
 
-    // 验证两个请求都收到了响应
+    // Verify both requests received responses
     expect(getResponseReceived).toBe(true);
     expect(postResponseReceived).toBe(true);
   });

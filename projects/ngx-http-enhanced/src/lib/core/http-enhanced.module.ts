@@ -21,12 +21,12 @@ export class HttpEnhancedModule {
       { provide: HTTP_INTERCEPTORS, useClass: RetryInterceptor, multi: true }
     ];
 
-    // 支持插件：如果 config.plugins 存在，将它们作为额外 interceptors 添加
+    // Support plugins: if config.plugins exists, add them as additional interceptors
     if (config.plugins && config.plugins.length > 0) {
       config.plugins.forEach((plugin, index) => {
         providers.push({
           provide: HTTP_INTERCEPTORS,
-          useValue: { intercept: plugin },  // 包装成 interceptor 格式
+          useValue: { intercept: plugin },  // Wrap in interceptor format
           multi: true
         });
       });
