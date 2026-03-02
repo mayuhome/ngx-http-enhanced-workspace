@@ -12,10 +12,11 @@ describe('CacheInterceptor', () => {
   beforeEach(() => {
     TestBed.configureTestingModule({
       imports: [HttpClientTestingModule],
+
       providers: [
         {
           provide: HTTP_INTERCEPTORS,
-          useExisting: CacheInterceptor,
+          useClass: CacheInterceptor,
           multi: true
         },
         {
@@ -40,12 +41,11 @@ describe('CacheInterceptor', () => {
     httpMock.verify();
   });
 
-  it('should cache GET requests', (done) => {
+  it('should cache GET requests', () => {
     const testData = { id: 1, name: 'Test' };
 
     http.get<any>('https://api.test.com/data').subscribe(data => {
       expect(data).toEqual(testData);
-      done();
     });
 
     const req = httpMock.expectOne('https://api.test.com/data');
@@ -54,18 +54,16 @@ describe('CacheInterceptor', () => {
 
     http.get<any>('https://api.test.com/data').subscribe(data => {
       expect(data).toEqual(testData);
-      done();
     });
 
     httpMock.expectNone('https://api.test.com/data');
   });
 
-  it('should not cache non-GET requests', (done) => {
+  it('should not cache non-GET requests', () => {
     const testData = { id: 1, name: 'Test' };
 
     http.post<any>('https://api.test.com/data', testData).subscribe(data => {
       expect(data).toEqual(testData);
-      done();
     });
 
     const req = httpMock.expectOne('https://api.test.com/data');
@@ -74,7 +72,6 @@ describe('CacheInterceptor', () => {
 
     http.post<any>('https://api.test.com/data', testData).subscribe(data => {
       expect(data).toEqual(testData);
-      done();
     });
 
     const req2 = httpMock.expectOne('https://api.test.com/data');
@@ -87,10 +84,9 @@ describe('CacheInterceptor', () => {
     TestBed.configureTestingModule({
       imports: [HttpClientTestingModule],
       providers: [
-        CacheInterceptor,
         {
           provide: HTTP_INTERCEPTORS,
-          useExisting: CacheInterceptor,
+          useClass: CacheInterceptor,
           multi: true
         },
         {

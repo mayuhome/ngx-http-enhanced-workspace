@@ -11,10 +11,9 @@ describe('DeduplicateInterceptor', () => {
     TestBed.configureTestingModule({
       imports: [HttpClientTestingModule],
       providers: [
-        DeduplicateInterceptor,
         {
           provide: HTTP_INTERCEPTORS,
-          useExisting: DeduplicateInterceptor,
+          useClass: DeduplicateInterceptor,
           multi: true
         }
       ]
@@ -80,32 +79,33 @@ describe('DeduplicateInterceptor', () => {
     req2.flush(testData2);
   });
 
-  it('should not deduplicate requests with same URL but different methods', (done) => {
-  const testData = { id: 1, name: 'Test' };
-  let callCount = 0;
+  it('should not deduplicate requests with same URL but different methods', () => {
+    const testData = { id: 1, name: 'Test' };
+    let getResponseReceived = false;
+    let postResponseReceived = false;
 
-  http.get<any>('https://api.test.com/data').subscribe(data => {
-    callCount++;
-    expect(data).toEqual(testData);
-    if (callCount === 2) {
-      done();
-    }
-  });
+    // 发送GET请求
+    http.get<any>('https://api.test.com/data').subscribe(data => {
+      expect(data).toEqual(testData);
+      getResponseReceived = true;
+    });
 
-  http.post<any>('https://api.test.com/data', testData).subscribe(data => {
-    callCount++;
-    expect(data).toEqual(testData);
-    if (callCount === 2) {
-      done();
-    }
-  });
+    // 发送POST请求到相同URL
+    http.post<any>('https://api.test.com/data', testData).subscribe(data => {
+      expect(data).toEqual(testData);
+      postResponseReceived = true;
+    });
 
-  const req1 = httpMock.expectOne('https://api.test.com/data');
-  expect(req1.request.method).toBe('GET');
-  req1.flush(testData);
+    // 验证GET请求被发出
+    const getReq = httpMock.expectOne(req => req.url === 'https://api.test.com/data' && req.method === 'GET');
+    getReq.flush(testData);
 
-  const req2 = httpMock.expectOne('https://api.test.com/data');
-  expect(req2.request.method).toBe('POST');
-  req2.flush(testData);
+    // 验证POST请求也被发出（不应该被去重）
+    const postReq = httpMock.expectOne(req => req.url === 'https://api.test.com/data' && req.method === 'POST');
+    postReq.flush(testData);
+
+    // 验证两个请求都收到了响应
+    expect(getResponseReceived).toBe(true);
+    expect(postResponseReceived).toBe(true);
   });
 });

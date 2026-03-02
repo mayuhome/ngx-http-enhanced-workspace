@@ -15,10 +15,9 @@ describe('ErrorInterceptor', () => {
     TestBed.configureTestingModule({
       imports: [HttpClientTestingModule],
       providers: [
-        ErrorInterceptor,
         {
           provide: HTTP_INTERCEPTORS,
-          useExisting: ErrorInterceptor,
+          useClass: ErrorInterceptor,
           multi: true
         },
         {
@@ -41,17 +40,13 @@ describe('ErrorInterceptor', () => {
   });
 
   it('should call handleError on error', (done) => {
-    const errorResponse = new HttpErrorResponse({
-      error: 'Test error',
-      status: 500,
-      statusText: 'Internal Server Error'
-    });
 
     http.get<any>('https://api.test.com/data').subscribe({
       next: () => fail('should have failed'),
       error: (error) => {
-        expect(error).toBe(errorResponse);
-        expect(handleErrorSpy).toHaveBeenCalledWith(errorResponse);
+        expect(error.status).toBe(500);
+        expect(error.statusText).toBe('Internal Server Error');
+        expect(handleErrorSpy).toHaveBeenCalledWith(error);
         done();
       }
     });
@@ -61,17 +56,13 @@ describe('ErrorInterceptor', () => {
   });
 
   it('should rethrow the error after handling', (done) => {
-    const errorResponse = new HttpErrorResponse({
-      error: 'Test error',
-      status: 404,
-      statusText: 'Not Found'
-    });
 
     http.get<any>('https://api.test.com/data').subscribe({
       next: () => fail('should have failed'),
       error: (error) => {
-        expect(error).toBe(errorResponse);
-        expect(handleErrorSpy).toHaveBeenCalledWith(errorResponse);
+        expect(error.status).toBe(404);
+        expect(error.statusText).toBe('Not Found');
+        expect(handleErrorSpy).toHaveBeenCalledWith(error);
         done();
       }
     });
@@ -81,17 +72,13 @@ describe('ErrorInterceptor', () => {
   });
 
   it('should handle network errors', (done) => {
-    const errorResponse = new HttpErrorResponse({
-      error: new ErrorEvent('Network Error'),
-      status: 0,
-      statusText: 'Unknown Error'
-    });
 
     http.get<any>('https://api.test.com/data').subscribe({
       next: () => fail('should have failed'),
       error: (error) => {
-        expect(error).toBe(errorResponse);
-        expect(handleErrorSpy).toHaveBeenCalledWith(errorResponse);
+        expect(error.status).toBe(0);
+        expect(error.statusText).toBe('Unknown Error');
+        expect(handleErrorSpy).toHaveBeenCalledWith(error);
         done();
       }
     });

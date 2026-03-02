@@ -12,9 +12,17 @@ export class LoadingInterceptor implements HttpInterceptor {
     this.strategy = { ...defaultLoadingStrategy, ...(config?.loadingStrategy || {}) };
   }
   intercept(req: HttpRequest<any>, next: HttpHandler): Observable<HttpEvent<any>> {
-    this.strategy?.onStart();  // 可插拔：基于 config.strategy 来判断是否显示 loading
+    const shouldShowLoading = this.strategy?.showLoading?.(req) ?? false;
+    if (!shouldShowLoading) {
+      return next.handle(req);
+    }
+
+    this.strategy?.onStart(); // 可插拔：基于 config.strategy 来判断是否显示 loading
+
     return next.handle(req).pipe(
-      finalize(() => this.strategy?.onEnd())
+      finalize(() => {
+          this.strategy?.onEnd();
+      })
     );
   }
 }

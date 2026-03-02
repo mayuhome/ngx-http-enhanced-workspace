@@ -5,7 +5,6 @@ import { RetryInterceptor } from './retry.interceptor';
 import { HTTP_ENHANCED_CONFIG } from '../core/http-enhanced.service';
 
 describe('RetryInterceptor', () => {
-  let interceptor: RetryInterceptor;
   let http: HttpClient;
   let httpMock: HttpTestingController;
 
@@ -13,10 +12,9 @@ describe('RetryInterceptor', () => {
     TestBed.configureTestingModule({
       imports: [HttpClientTestingModule],
       providers: [
-        RetryInterceptor,
         {
           provide: HTTP_INTERCEPTORS,
-          useExisting: RetryInterceptor,
+          useClass: RetryInterceptor,
           multi: true
         },
         {
