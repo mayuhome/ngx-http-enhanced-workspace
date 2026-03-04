@@ -138,7 +138,7 @@ provideHttpEnhanced({
 
  * [x] 核心拦截器链
  * [x] Loading / Error / Cache / Dedupe / Retry
- * [x] Decorator 支持
+ * [ ] Decorator 支持
  * [ ] 完整单元测试覆盖（进行中）
  * [ ] 多版本 Angular CI 矩阵测试（计划中）
  * [ ] Schematics / ng add 支持（计划中）

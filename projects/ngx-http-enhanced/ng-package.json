@@ -3,5 +3,9 @@
   "dest": "../../dist/ngx-http-enhanced",
   "lib": {
     "entryFile": "src/public-api.ts"
-  }
+  },
+  "assets": [
+    "README.md",
+    "README.en.md"
+  ]
 }
