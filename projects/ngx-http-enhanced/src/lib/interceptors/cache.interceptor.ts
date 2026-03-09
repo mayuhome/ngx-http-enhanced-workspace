@@ -1,6 +1,6 @@
 import { inject, EnvironmentInjector, runInInjectionContext } from '@angular/core';
-import { HttpInterceptorFn, HttpResponse } from '@angular/common/http';
-import { of, tap, shareReplay } from 'rxjs';
+import { HttpInterceptorFn, HttpResponse, HttpEvent } from '@angular/common/http';
+import { Observable, tap } from 'rxjs';
 import { defaultCacheStrategy } from '../core/strategies/cache.strategy';
 import { HTTP_ENHANCED_CONFIG, HttpEnhancedService } from '../core/http-enhanced.service';
 
@@ -17,15 +17,14 @@ export const cacheInterceptor: HttpInterceptorFn = (req, next) => {
   const shouldCache = runInInjectionContext(injector, () => strategy.shouldCache?.(req) ?? false);
   if (!shouldCache) return next(req);
 
-  if (!shouldCache) {
-    return next(req);
-  }
-
   const key = runInInjectionContext(injector, () => strategy.generateKey?.(req) ?? req.urlWithParams);
 
   const cached = service.getCache(key);
   if (cached) {
-    return of(cached);
+    return new Observable<HttpEvent<any>>((subscriber) => {
+      subscriber.next(cached);
+      subscriber.complete();
+    });
   }
 
   return next(req).pipe(
@@ -33,10 +32,8 @@ export const cacheInterceptor: HttpInterceptorFn = (req, next) => {
       if (event instanceof HttpResponse) {
         const ttl = strategy.ttl ?? 0;
         service.setCache(key, event, ttl);
-
         runInInjectionContext(injector, () => strategy.evict?.(key));
       }
-    }),
-    shareReplay(1)
+    })
   );
 };

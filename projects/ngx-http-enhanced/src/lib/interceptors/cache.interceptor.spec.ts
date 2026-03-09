@@ -23,7 +23,7 @@ describe('CacheInterceptor', () => {
           }
         },
         provideHttpClient(withInterceptors([cacheInterceptor])),
-        provideHttpClientTesting(),
+        provideHttpClientTesting()
       ]
     });
 
@@ -38,7 +38,7 @@ describe('CacheInterceptor', () => {
   it('第一次请求应该发起网络调用，并缓存结果', () => {
     const mockData = { id: 1, text: 'Hello' };
 
-    httpClient.get(TEST_URL).subscribe(res => {
+    httpClient.get(TEST_URL).subscribe((res) => {
       expect(res).toEqual(mockData);
     });
 
@@ -59,7 +59,7 @@ describe('CacheInterceptor', () => {
 
     // 3. 发起第二次请求
     let cachedResult: any;
-    httpClient.get(TEST_URL).subscribe(res => cachedResult = res);
+    httpClient.get(TEST_URL).subscribe((res) => (cachedResult = res));
     tick();
 
     // 验证：httpMock 应该找不到新请求 (expectNone)
@@ -87,14 +87,17 @@ describe('CacheInterceptor', () => {
     let firstResponse: any;
     let secondResponse: any;
 
-    httpClient.get(TEST_URL).subscribe(res => firstResponse = res);
+    httpClient.get(TEST_URL).subscribe((res) => (firstResponse = res));
     httpMock.expectOne(TEST_URL).flush(originalBody);
 
     tick(1000);
 
-    httpClient.get(TEST_URL).subscribe(res => secondResponse = res);
-    httpMock.expectOne(TEST_URL).flush(originalBody);
+    httpClient.get(TEST_URL).subscribe((res) => (secondResponse = res));
     tick(1000);
+
+    // 验证没有新的网络请求
+    httpMock.expectNone(TEST_URL);
+
     // 修改第一个响应的对象属性
     firstResponse.user.name = 'Modified';
 

@@ -1,8 +1,8 @@
 import { inject, EnvironmentInjector, runInInjectionContext } from '@angular/core';
 import { HttpInterceptorFn } from '@angular/common/http';
 import { finalize } from 'rxjs';
-import { HTTP_ENHANCED_CONFIG } from 'ngx-http-enhanced';
 import { defaultLoadingStrategy } from '../core/strategies/loading.strategy';
+import { HTTP_ENHANCED_CONFIG } from '../core/http-enhanced.service';
 
 export const loadingInterceptor: HttpInterceptorFn = (req, next) => {
   // 1. safe inject dependencies
