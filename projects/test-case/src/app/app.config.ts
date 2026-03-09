@@ -36,6 +36,6 @@ export const appConfig: ApplicationConfig = {
         delay: (attempt) => 1000 * Math.pow(2, attempt),
         shouldRetry: (err) => err.status >= 500 || err.status === 0
       }
-    }),
+    })
   ]
 };

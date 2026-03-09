@@ -18,8 +18,7 @@ export const httpEnhancedInterceptors: HttpInterceptorFn[] = [
 
 function getBaseProviders(config: HttpEnhancedConfig): Provider[] {
   return [
-    { provide: HTTP_ENHANCED_CONFIG, useValue: config },
-    HttpEnhancedService,
+    { provide: HTTP_ENHANCED_CONFIG, useValue: config }
   ];
 }
 
