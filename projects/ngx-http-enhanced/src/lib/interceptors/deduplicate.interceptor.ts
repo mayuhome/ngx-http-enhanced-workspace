@@ -1,21 +1,35 @@
-// interceptors/deduplicate.interceptor.ts
-import { HttpEvent, HttpHandler, HttpInterceptor, HttpRequest } from '@angular/common/http';
-import { Injectable } from '@angular/core';
-import { Observable, finalize } from 'rxjs';
+import { HttpInterceptorFn } from '@angular/common/http';
+import { EnvironmentInjector, inject, runInInjectionContext } from '@angular/core';
+import { finalize } from 'rxjs';
 import { shareReplay } from 'rxjs/operators';
+import { HTTP_ENHANCED_CONFIG, HttpEnhancedService } from '../../public-api';
+import { defaultDeduplicateStrategy } from '../core/strategies/deduplicate.strategy';
 
-const pending = new Map<string, Observable<any>>();
+export const deduplicateInterceptor: HttpInterceptorFn = (req, next) => {
+  const config = inject(HTTP_ENHANCED_CONFIG, { optional: true });
+  const injector = inject(EnvironmentInjector);
+  const service = inject(HttpEnhancedService);
 
-@Injectable()
-export class DeduplicateInterceptor implements HttpInterceptor {
-  intercept(req: HttpRequest<any>, next: HttpHandler): Observable<HttpEvent<any>> {
-    const key = req.urlWithParams + req.method;
-    if (pending.has(key)) return pending.get(key)!;
-    const shared = next.handle(req).pipe(
-      shareReplay(1),
-      finalize(() => pending.delete(key))
-    );
-    pending.set(key, shared);
-    return shared;
+  const strategy = {
+    ...defaultDeduplicateStrategy,
+    ...(config?.deduplicateStrategy || {})
+  };
+  const key = runInInjectionContext(injector, () => strategy.generateKey(req));
+
+
+  // check if there is an active request with the same key
+  const activeRequest = service.pending.get(key);
+  if (activeRequest) {
+    return activeRequest;
   }
-}
+
+const shared = next(req).pipe(
+    shareReplay(1),
+    finalize(() => {
+      service.pending.delete(key);
+    })
+  );
+
+  service.pending.set(key, shared);
+  return shared;
+};

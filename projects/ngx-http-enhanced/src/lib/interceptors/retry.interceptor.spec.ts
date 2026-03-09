@@ -1,36 +1,34 @@
 import { TestBed, fakeAsync, tick } from '@angular/core/testing';
-import { HTTP_INTERCEPTORS, HttpClient, HttpErrorResponse } from '@angular/common/http';
-import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
-import { RetryInterceptor } from './retry.interceptor';
+import { HttpClient, provideHttpClient, withInterceptors } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { HTTP_ENHANCED_CONFIG } from '../core/http-enhanced.service';
+import { HttpEnhancedConfig } from '../core/config.interface';
+import { retryInterceptor } from './retry.interceptor';
 
-describe('RetryInterceptor', () => {
-  let http: HttpClient;
+describe('retryInterceptor', () => {
   let httpMock: HttpTestingController;
+  let httpClient: HttpClient;
+  const TEST_URL = '/data';
+
+  // 模拟配置：重试 2 次，每次间隔 1s，仅在 500 错误时重试
+  const mockConfig: HttpEnhancedConfig = {
+    retryStrategy: {
+      maxRetries: 2,
+      delay: () => 1000,
+      shouldRetry: (err) => err.status === 500
+    }
+  };
 
   beforeEach(() => {
     TestBed.configureTestingModule({
-      imports: [HttpClientTestingModule],
       providers: [
-        {
-          provide: HTTP_INTERCEPTORS,
-          useClass: RetryInterceptor,
-          multi: true
-        },
-        {
-          provide: HTTP_ENHANCED_CONFIG,
-          useValue: {
-            retryStrategy: {
-              maxRetries: 3,
-              delay: (attempt: number) => 100,
-              shouldRetry: (err: HttpErrorResponse) => err.status >= 500 || err.status === 0
-            }
-          }
-        }
+        { provide: HTTP_ENHANCED_CONFIG, useValue: mockConfig },
+        provideHttpClient(withInterceptors([retryInterceptor])),
+        provideHttpClientTesting()
       ]
     });
 
-    http = TestBed.inject(HttpClient);
+    httpClient = TestBed.inject(HttpClient);
     httpMock = TestBed.inject(HttpTestingController);
   });
 
@@ -38,86 +36,96 @@ describe('RetryInterceptor', () => {
     httpMock.verify();
   });
 
-  it('should retry on 5xx errors', fakeAsync(() => {
-    const testData = { id: 1, name: 'Test' };
-    let attemptCount = 0;
+  it('should pass through successful requests', () => {
+    const mockResponse = { data: 'success' };
 
-    http.get<any>('https://api.test.com/data').subscribe(data => {
-      expect(data).toEqual(testData);
-      expect(attemptCount).toBe(2);
+    httpClient.get('/data').subscribe((res) => {
+      expect(res).toEqual(mockResponse);
     });
 
-    for (let i = 0; i < 2; i++) {
-      const req = httpMock.expectOne('https://api.test.com/data');
-      attemptCount++;
-      if (i === 0) {
-        req.flush('Server Error', { status: 500, statusText: 'Internal Server Error' });
-        tick(100);
-      } else {
-        req.flush(testData);
-      }
-    }
-  }));
-
-  it('should not retry on 4xx errors', (done) => {
-    http.get<any>('https://api.test.com/data').subscribe({
-      next: () => fail('should have failed'),
-      error: (error) => {
-        expect(error.status).toBe(404);
-        done();
-      }
-    });
-
-    const req = httpMock.expectOne('https://api.test.com/data');
-    req.flush('Not Found', { status: 404, statusText: 'Not Found' });
+    const req = httpMock.expectOne('/data');
+    req.flush(mockResponse);
   });
 
-  it('should respect maxRetries limit', fakeAsync(() => {
-    let attemptCount = 0;
-    let errorReceived = false;
+  it('should retry specified number of times on 500 error', fakeAsync(() => {
+    httpClient.get('/data').subscribe({ error: () => {} });
 
-    http.get<any>('https://api.test.com/data').subscribe({
-      next: () => fail('should have failed'),
-      error: (error) => {
-        expect(error.status).toBe(500);
-        expect(attemptCount).toBe(4);
-        errorReceived = true;
-      }
-    });
+    // 初始失败
+    httpMock.expectOne('/data').flush('', { status: 500, statusText: 'Error' });
 
-    for (let i = 0; i < 4; i++) {
-    try {
-      const req = httpMock.expectOne('https://api.test.com/data');
-      attemptCount++;
-      req.flush('Server Error', { status: 500, statusText: 'Internal Server Error' });
-      if (i < 3) {
-        tick(100);
-      }
-    } catch (e) {
-      // When max retries are reached, the request may be cancelled
-      break;
-    }
-    }
+    // 第一次重试
+    tick(1000);
+    httpMock.expectOne('/data').flush('', { status: 500, statusText: 'Error' });
+
+    // 第二次重试
+    tick(1000);
+    httpMock.expectOne('/data').flush('', { status: 500, statusText: 'Error' });
+
+    // 验证没有第三次
+    tick(1000);
+    httpMock.expectNone('/data');
   }));
 
-  it('should retry on network errors (status 0)', fakeAsync(() => {
-    const testData = { id: 1, name: 'Test' };
-    let attemptCount = 0;
+  it('should stop retrying immediately if shouldRetry returns false', fakeAsync(() => {
+    let errorCount = 0;
 
-    http.get<any>('https://api.test.com/data').subscribe(data => {
-      expect(data).toEqual(testData);
-      expect(attemptCount).toBe(2);
+    httpClient.get('/data').subscribe({
+      error: () => errorCount++
     });
 
-    for (let i = 0; i < 2; i++) {
-      const req = httpMock.expectOne('https://api.test.com/data');
-      attemptCount++;
-      if (i === 0) {
-        req.error(new ErrorEvent('Network Error'));
-        tick(100);
-      } else {
-        req.flush(testData);
+    // 模拟 403 错误，不满足 shouldRetry (status === 500)
+    const req = httpMock.expectOne('/data');
+    req.flush('Forbidden', { status: 403, statusText: 'Forbidden' });
+
+    tick(5000); // 等待较长时间确认没有重试发生
+
+    expect(errorCount).toBe(1);
+    httpMock.expectNone('/data'); // 确认后续没有新的请求发起
+  }));
+
+  it('should return success if a retry eventually succeeds', fakeAsync(() => {
+    let result: any;
+    httpClient.get('/data').subscribe((res) => (result = res));
+
+    httpMock.expectOne('/data').flush('', { status: 500, statusText: 'Error' });
+
+    tick(1000);
+    httpMock.expectOne('/data').flush({ success: true });
+
+    expect(result.success).toBe(true);
+  }));
+
+  it('should respect the dynamic delay timing', fakeAsync(() => {
+    // 重新配置一个带有指数级延迟的策略
+    const dynamicConfig: HttpEnhancedConfig = {
+      retryStrategy: {
+        maxRetries: 1,
+        delay: (attempt) => attempt * 2000, // 指数级延迟
+        shouldRetry: (err) => err.status === 500 // 仅在 500 错误时重试
       }
-    }
+    };
+
+    // 清理并重新配置测试模块以应用新配置
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      providers: [
+        { provide: HTTP_ENHANCED_CONFIG, useValue: dynamicConfig },
+        provideHttpClient(withInterceptors([retryInterceptor])),
+        provideHttpClientTesting()
+      ]
+    });
+
+    const client = TestBed.inject(HttpClient);
+    const mock = TestBed.inject(HttpTestingController);
+
+    client.get('/delay-test').subscribe({ error: () => {} });
+
+    mock.expectOne('/delay-test').flush('', { status: 500, statusText: 'Error' });
+
+    tick(1999);
+    mock.expectNone('/delay-test'); // 还没到 2000ms，不应发起请求
+
+    tick(1);
+    mock.expectOne('/delay-test'); // 正好 2000ms，发起重试
   }));
 });

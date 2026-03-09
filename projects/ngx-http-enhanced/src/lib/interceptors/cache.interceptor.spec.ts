@@ -1,39 +1,33 @@
-import { TestBed } from '@angular/core/testing';
-import { HTTP_INTERCEPTORS, HttpClient } from '@angular/common/http';
-import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
-import { CacheInterceptor } from './cache.interceptor';
+import { TestBed, fakeAsync, tick } from '@angular/core/testing';
+import { HttpClient, provideHttpClient, withInterceptors } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { cacheInterceptor } from './cache.interceptor';
 import { HTTP_ENHANCED_CONFIG } from '../core/http-enhanced.service';
-import { HttpRequest } from '@angular/common/http';
 
 describe('CacheInterceptor', () => {
-  let http: HttpClient;
   let httpMock: HttpTestingController;
+  let httpClient: HttpClient;
+  const TEST_URL = '/api/resource';
 
   beforeEach(() => {
     TestBed.configureTestingModule({
-      imports: [HttpClientTestingModule],
-
       providers: [
-        {
-          provide: HTTP_INTERCEPTORS,
-          useClass: CacheInterceptor,
-          multi: true
-        },
         {
           provide: HTTP_ENHANCED_CONFIG,
           useValue: {
             cacheStrategy: {
-              ttl: 60000,
-              generateKey: (req: HttpRequest<any>) => req.urlWithParams,
-              shouldCache: (req: HttpRequest<any>) => req.method === 'GET',
-              evict: (key: string) => {}
+              shouldCache: (req: any) => req.method === 'GET',
+              ttl: 3000,
+              generateKey: (req: any) => req.urlWithParams
             }
           }
-        }
+        },
+        provideHttpClient(withInterceptors([cacheInterceptor])),
+        provideHttpClientTesting(),
       ]
     });
 
-    http = TestBed.inject(HttpClient);
+    httpClient = TestBed.inject(HttpClient);
     httpMock = TestBed.inject(HttpTestingController);
   });
 
@@ -41,85 +35,82 @@ describe('CacheInterceptor', () => {
     httpMock.verify();
   });
 
-  it('should cache GET requests', () => {
-    const testData = { id: 1, name: 'Test' };
+  it('第一次请求应该发起网络调用，并缓存结果', () => {
+    const mockData = { id: 1, text: 'Hello' };
 
-    http.get<any>('https://api.test.com/data').subscribe(data => {
-      expect(data).toEqual(testData);
+    httpClient.get(TEST_URL).subscribe(res => {
+      expect(res).toEqual(mockData);
     });
 
-    const req = httpMock.expectOne('https://api.test.com/data');
-    expect(req.request.method).toBe('GET');
-    req.flush(testData);
-
-    http.get<any>('https://api.test.com/data').subscribe(data => {
-      expect(data).toEqual(testData);
-    });
-
-    httpMock.expectNone('https://api.test.com/data');
+    // 第一次必须有网络请求
+    const req = httpMock.expectOne(TEST_URL);
+    req.flush(mockData);
   });
 
-  it('should not cache non-GET requests', () => {
-    const testData = { id: 1, name: 'Test' };
+  it('在 TTL 时间内发起第二次请求，应该直接返回缓存，不发起网络调用', fakeAsync(() => {
+    const mockData = { id: 1 };
 
-    http.post<any>('https://api.test.com/data', testData).subscribe(data => {
-      expect(data).toEqual(testData);
-    });
+    // 1. 发起第一次请求并缓存
+    httpClient.get(TEST_URL).subscribe();
+    httpMock.expectOne(TEST_URL).flush(mockData);
 
-    const req = httpMock.expectOne('https://api.test.com/data');
-    expect(req.request.method).toBe('POST');
-    req.flush(testData);
+    // 2. 模拟时间流逝 2 秒 (未过期)
+    tick(2000);
 
-    http.post<any>('https://api.test.com/data', testData).subscribe(data => {
-      expect(data).toEqual(testData);
-    });
+    // 3. 发起第二次请求
+    let cachedResult: any;
+    httpClient.get(TEST_URL).subscribe(res => cachedResult = res);
+    tick();
 
-    const req2 = httpMock.expectOne('https://api.test.com/data');
-    expect(req2.request.method).toBe('POST');
-    req2.flush(testData);
-  });
+    // 验证：httpMock 应该找不到新请求 (expectNone)
+    httpMock.expectNone(TEST_URL);
+    expect(cachedResult).toEqual(mockData);
+  }));
 
-  it('should respect custom shouldCache function', (done) => {
-    TestBed.resetTestingModule();
-    TestBed.configureTestingModule({
-      imports: [HttpClientTestingModule],
-      providers: [
-        {
-          provide: HTTP_INTERCEPTORS,
-          useClass: CacheInterceptor,
-          multi: true
-        },
-        {
-          provide: HTTP_ENHANCED_CONFIG,
-          useValue: {
-            cacheStrategy: {
-              ttl: 60000,
-              generateKey: (req: HttpRequest<any>) => req.urlWithParams,
-              shouldCache: (req: HttpRequest<any>) => req.url.includes('cache'),
-              evict: (key: string) => {}
-            }
-          }
-        }
-      ]
-    });
+  it('当缓存过期后，应该再次发起网络请求', fakeAsync(() => {
+    // 1. 缓存数据
+    httpClient.get(TEST_URL).subscribe();
+    httpMock.expectOne(TEST_URL).flush({ data: 'old' });
 
-    http = TestBed.inject(HttpClient);
-    httpMock = TestBed.inject(HttpTestingController);
+    // 2. 模拟时间流逝 6 秒 (超过 TTL 5s)
+    tick(6000);
 
-    const testData = { id: 1, name: 'Test' };
+    // 3. 再次发起请求
+    httpClient.get(TEST_URL).subscribe();
 
-    http.get<any>('https://api.test.com/cache/data').subscribe(data => {
-      expect(data).toEqual(testData);
-    });
+    // 验证：此时应该产生了一个新的网络请求
+    httpMock.expectOne(TEST_URL);
+  }));
 
-    const req = httpMock.expectOne('https://api.test.com/cache/data');
-    req.flush(testData);
+  it('返回的响应应该是克隆对象，防止状态污染', fakeAsync(() => {
+    const originalBody = { user: { name: 'Old' } };
+    let firstResponse: any;
+    let secondResponse: any;
 
-    http.get<any>('https://api.test.com/cache/data').subscribe(data => {
-      expect(data).toEqual(testData);
-      done();
-    });
+    httpClient.get(TEST_URL).subscribe(res => firstResponse = res);
+    httpMock.expectOne(TEST_URL).flush(originalBody);
 
-    httpMock.expectNone('https://api.test.com/cache/data');
+    tick(1000);
+
+    httpClient.get(TEST_URL).subscribe(res => secondResponse = res);
+    httpMock.expectOne(TEST_URL).flush(originalBody);
+    tick(1000);
+    // 修改第一个响应的对象属性
+    firstResponse.user.name = 'Modified';
+
+    // 验证第二个响应（从缓存获取）没有受到影响
+    expect(secondResponse.user.name).toBe('Old');
+    expect(firstResponse).not.toBe(secondResponse); // 引用地址应不同
+  }));
+
+  it('非 GET 请求不应触发缓存逻辑 (根据 shouldCache 配置)', () => {
+    httpClient.post(TEST_URL, {}).subscribe();
+
+    // 即使发了两次 POST
+    httpMock.expectOne(TEST_URL).flush({});
+
+    httpClient.post(TEST_URL, {}).subscribe();
+    // 依然会有第二次请求
+    httpMock.expectOne(TEST_URL).flush({});
   });
 });

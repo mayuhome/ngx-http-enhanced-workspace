@@ -1,6 +1,6 @@
-import { CommonModule, JsonPipe } from '@angular/common';
+import { JsonPipe } from '@angular/common';
 import { Component } from '@angular/core';
-import { HttpEnhancedService } from 'ngx-http-enhanced';
+import { TestApiService } from '../service/test-api';
 
 interface Post {
   userId: number;
@@ -18,6 +18,7 @@ interface User {
 @Component({
   selector: 'app-root',
   imports: [JsonPipe],
+  providers: [TestApiService],
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss'
 })
@@ -32,7 +33,7 @@ export class AppComponent {
   deduplicateResult: any = null;
   logs: string[] = [];
 
-  constructor(private httpService: HttpEnhancedService) {}
+  constructor(private testApiService: TestApiService) {}
 
   addLog(message: string) {
     const timestamp = new Date().toLocaleTimeString();
@@ -42,7 +43,7 @@ export class AppComponent {
 
   testGet() {
     this.addLog('开始 GET 请求测试...');
-    this.httpService.get<Post[]>('https://jsonplaceholder.typicode.com/posts?_limit=5')
+    this.testApiService.get<Post[]>('posts?_limit=5')
       .subscribe({
         next: (data) => {
           this.posts = data;
@@ -62,7 +63,7 @@ export class AppComponent {
       userId: 1
     };
 
-    this.httpService.post<Post>('https://jsonplaceholder.typicode.com/posts', newPost)
+    this.testApiService.post<Post>('posts', newPost)
       .subscribe({
         next: (data) => {
           this.createdPost = data;
@@ -83,7 +84,7 @@ export class AppComponent {
       userId: 1
     };
 
-    this.httpService.put<Post>('https://jsonplaceholder.typicode.com/posts/1', updatedPost)
+    this.testApiService.put<Post>('posts/1', updatedPost)
       .subscribe({
         next: (data) => {
           this.updatedPost = data;
@@ -97,7 +98,7 @@ export class AppComponent {
 
   testDelete() {
     this.addLog('开始 DELETE 请求测试...');
-    this.httpService.delete<any>('https://jsonplaceholder.typicode.com/posts/1')
+    this.testApiService.delete<any>('posts/1')
       .subscribe({
         next: (data) => {
           this.deleteResult = data;
@@ -115,7 +116,7 @@ export class AppComponent {
       title: '部分更新的标题'
     };
 
-    this.httpService.patch<Post>('https://jsonplaceholder.typicode.com/posts/1', patchData)
+    this.testApiService.patch<Post>('posts/1', patchData)
       .subscribe({
         next: (data) => {
           this.patchedPost = data;
@@ -129,7 +130,7 @@ export class AppComponent {
 
   testError() {
     this.addLog('开始错误处理测试...');
-    this.httpService.get<any>('https://jsonplaceholder.typicode.com/invalid-endpoint')
+    this.testApiService.get<any>('invalid-endpoint')
       .subscribe({
         next: (data) => {
           this.addLog('意外成功');
@@ -143,7 +144,7 @@ export class AppComponent {
 
   testCache() {
     this.addLog('开始缓存测试...');
-    this.httpService.get<User>('https://jsonplaceholder.typicode.com/users/1')
+    this.testApiService.get<User>('users/1')
       .subscribe({
         next: (data) => {
           this.user = data;
@@ -159,7 +160,7 @@ export class AppComponent {
     this.addLog('开始去重测试...');
     const url = 'https://jsonplaceholder.typicode.com/posts/1';
 
-    this.httpService.get<Post>(url).subscribe({
+    this.testApiService.get<Post>(url).subscribe({
       next: (data) => {
         this.deduplicateResult = data;
         this.addLog(`去重测试成功，获取文章: ${data.title}`);
@@ -169,7 +170,7 @@ export class AppComponent {
       }
     });
 
-    this.httpService.get<Post>(url).subscribe({
+    this.testApiService.get<Post>(url).subscribe({
       next: (data) => {
         this.addLog(`去重测试 - 第二个请求完成 (应该被去重): ${data.title}`);
       },

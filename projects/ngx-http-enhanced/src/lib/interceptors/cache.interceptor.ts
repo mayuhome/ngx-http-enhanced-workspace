@@ -1,36 +1,42 @@
-import { HttpEvent, HttpHandler, HttpInterceptor, HttpRequest, HttpResponse } from '@angular/common/http';
-import { Inject, Injectable, Optional } from '@angular/core';
-import { Observable, of } from 'rxjs';
-import { tap, shareReplay } from 'rxjs/operators';
-import { HttpEnhancedConfig } from '../core/config.interface';
-import { HTTP_ENHANCED_CONFIG } from '../core/http-enhanced.service';
+import { inject, EnvironmentInjector, runInInjectionContext } from '@angular/core';
+import { HttpInterceptorFn, HttpResponse } from '@angular/common/http';
+import { of, tap, shareReplay } from 'rxjs';
 import { defaultCacheStrategy } from '../core/strategies/cache.strategy';
+import { HTTP_ENHANCED_CONFIG, HttpEnhancedService } from '../core/http-enhanced.service';
 
-const cache = new Map<string, { value: HttpResponse<any>, expiry: number }>();
+export const cacheInterceptor: HttpInterceptorFn = (req, next) => {
+  const config = inject(HTTP_ENHANCED_CONFIG, { optional: true });
+  const injector = inject(EnvironmentInjector);
+  const service = inject(HttpEnhancedService);
 
-@Injectable()
-export class CacheInterceptor implements HttpInterceptor {
-  private strategy: HttpEnhancedConfig['cacheStrategy'];
-constructor(@Optional() @Inject(HTTP_ENHANCED_CONFIG) private config?: HttpEnhancedConfig) {
-    this.strategy = { ...defaultCacheStrategy, ...(config?.cacheStrategy || {}) };
+  const strategy = {
+    ...defaultCacheStrategy,
+    ...(config?.cacheStrategy || {})
+  };
+
+  const shouldCache = runInInjectionContext(injector, () => strategy.shouldCache?.(req) ?? false);
+  if (!shouldCache) return next(req);
+
+  if (!shouldCache) {
+    return next(req);
   }
-intercept(req: HttpRequest<any>, next: HttpHandler): Observable<HttpEvent<any>> {
-    if (!this.strategy?.shouldCache(req)) return next.handle(req);
 
-    const key = this.strategy.generateKey(req);
-    const cached = cache.get(key);
-    if (cached && Date.now() < cached.expiry) {
-      return of(cached.value.clone());
-    }
+  const key = runInInjectionContext(injector, () => strategy.generateKey?.(req) ?? req.urlWithParams);
 
-    return next.handle(req).pipe(
-      tap(event => {
-        if (event instanceof HttpResponse) {
-          const expiry = Date.now() + (this.strategy?.ttl || 0);
-          cache.set(key, { value: event, expiry });
-        }
-      }),
-      shareReplay(1)
-    );
+  const cached = service.getCache(key);
+  if (cached) {
+    return of(cached);
   }
-}
+
+  return next(req).pipe(
+    tap((event) => {
+      if (event instanceof HttpResponse) {
+        const ttl = strategy.ttl ?? 0;
+        service.setCache(key, event, ttl);
+
+        runInInjectionContext(injector, () => strategy.evict?.(key));
+      }
+    }),
+    shareReplay(1)
+  );
+};

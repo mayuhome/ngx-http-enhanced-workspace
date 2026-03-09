@@ -1,32 +1,39 @@
-import { Injectable, Inject, Optional } from '@angular/core';
-import { HttpInterceptor, HttpRequest, HttpHandler, HttpEvent } from '@angular/common/http';
-import { Observable } from 'rxjs';
-import { retryWhen, delayWhen, take, mergeMap } from 'rxjs/operators';
-import { timer, throwError, of } from 'rxjs';
-import { HttpEnhancedConfig } from '../core/config.interface';
-import { HTTP_ENHANCED_CONFIG } from '../core/http-enhanced.service';
+import { inject, EnvironmentInjector, runInInjectionContext } from '@angular/core';
+import { HttpInterceptorFn } from '@angular/common/http';
+import { retry, timer } from 'rxjs';
 import { defaultRetryStrategy } from '../core/strategies/retry.strategy';
+import { HTTP_ENHANCED_CONFIG } from '../../public-api';
 
-@Injectable()
-export class RetryInterceptor implements HttpInterceptor {
-  private strategy: HttpEnhancedConfig['retryStrategy'];
+export const retryInterceptor: HttpInterceptorFn = (req, next) => {
+  const config = inject(HTTP_ENHANCED_CONFIG, { optional: true });
+  const injector = inject(EnvironmentInjector);
 
-  constructor(@Optional() @Inject(HTTP_ENHANCED_CONFIG) private config?: HttpEnhancedConfig) {
-    this.strategy = { ...defaultRetryStrategy, ...(config?.retryStrategy || {}) };
-  }
+  const strategy = {
+    ...defaultRetryStrategy,
+    ...(config?.retryStrategy || {})
+  };
 
-  intercept(req: HttpRequest<any>, next: HttpHandler): Observable<HttpEvent<any>> {
-    return next.handle(req).pipe(
-      retryWhen(errors => errors.pipe(
-        mergeMap((err, attempt) => {
-          if (attempt > (this.strategy?.maxRetries || 0) || !this.strategy?.shouldRetry(err)) {
-            return throwError(() => err);
-          }
-          return of(err);
-        }),
-        delayWhen((_, attempt) => timer(this.strategy?.delay?.(attempt) || 0)),
-        take(this.strategy?.maxRetries || 0)
-      ))
-    );
-  }
-}
+  return next(req).pipe(
+    retry({
+      count: strategy.maxRetries,
+      delay: (error, retryCount) => {
+        // 1. 检查是否应该继续重试
+        const shouldRetry = runInInjectionContext(injector, () =>
+          strategy.shouldRetry?.(error) ?? true
+        );
+
+        if (!shouldRetry) {
+          throw error; // 停止重试，直接抛出错误
+        }
+
+        // 2. 计算延迟时间并等待
+        const delayTime = runInInjectionContext(injector, () =>
+          strategy.delay?.(retryCount) ?? 1000
+        );
+
+        console.log(`[Retry] 第 ${retryCount} 次重试，延迟 ${delayTime}ms`);
+        return timer(delayTime);
+      }
+    })
+  );
+};
