@@ -158,7 +158,7 @@ export class AppComponent {
 
   testDeduplicate() {
     this.addLog('开始去重测试...');
-    const url = 'https://jsonplaceholder.typicode.com/posts/1';
+    const url = 'posts/1';
 
     this.testApiService.get<Post>(url).subscribe({
       next: (data) => {

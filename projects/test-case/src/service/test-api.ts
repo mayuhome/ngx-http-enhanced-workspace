@@ -1,4 +1,4 @@
-import { HttpEnhancedService } from 'ngx-http-enhanced';
+import { EnhancedClientService, HttpEnhancedService } from 'ngx-http-enhanced';
 
 import { inject, Injectable } from '@angular/core';
 
@@ -7,7 +7,7 @@ export class TestApiService {
 
   readonly baseUrl = 'https://jsonplaceholder.typicode.com/';
 
-  readonly httpService = inject(HttpEnhancedService);
+  readonly httpService = inject(EnhancedClientService);
 
   get<T>(url: string) {
     return this.httpService.get<T>(`${this.baseUrl}${url}`);

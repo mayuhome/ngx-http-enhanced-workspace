@@ -1,12 +1,12 @@
-import { inject, EnvironmentInjector, runInInjectionContext } from '@angular/core';
-import { HttpInterceptorFn, HttpErrorResponse } from '@angular/common/http';
+import { inject } from '@angular/core';
+import { HttpInterceptorFn } from '@angular/common/http';
 import { catchError, throwError } from 'rxjs';
-import { HTTP_ENHANCED_CONFIG } from '../../public-api';
+import { HTTP_ENHANCED_CONFIG } from '../core/http-enhanced.service';
 import { defaultErrorStrategy } from '../core/strategies/error.strategy';
 
 export const errorInterceptor: HttpInterceptorFn = (req, next) => {
+
   const config = inject(HTTP_ENHANCED_CONFIG, { optional: true });
-  const injector = inject(EnvironmentInjector);
 
   const strategy = {
     ...defaultErrorStrategy,
@@ -14,11 +14,8 @@ export const errorInterceptor: HttpInterceptorFn = (req, next) => {
   };
 
   return next(req).pipe(
-    catchError((err: HttpErrorResponse) => {
-      // use `runInInjectionContext` to execute user-defined callback
-      runInInjectionContext(injector, () => {
-        strategy.handleError?.(err);
-      });
+    catchError((err) => {
+      strategy.handleError?.(err);
       return throwError(() => err);
     })
   );

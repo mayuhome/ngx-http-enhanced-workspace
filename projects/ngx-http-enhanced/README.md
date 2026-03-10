@@ -41,24 +41,76 @@ pnpm add ngx-http-enhanced
 ```
 
 ## 快速开始
-### 1. 在 AppModule / Standalone 中引入
+
+### 1. 在 Standalone 应用中引入（推荐）
+
 ```typescript
-// app.config.ts 或 app.module.ts
-import { provideHttpClient, withInterceptorsFromDi } from '@angular/common/http';
+// app.config.ts
 import { provideHttpEnhanced } from 'ngx-http-enhanced';
 
-bootstrapApplication(AppComponent, {
+export const appConfig: ApplicationConfig = {
   providers: [
-    provideHttpClient(withInterceptorsFromDi()),
+    // 一行代码搞定所有配置，包括 HttpClient 和所有拦截器
     provideHttpEnhanced({
-      // 可选：全局配置
-      cacheTtl: 5 * 60 * 1000,      // 默认缓存 5 分钟
-      retryCount: 2,                // 默认重试 2 次
-      // loadingStrategy: (req) => !req.url.includes('/no-loading'),
-      // errorHandler: (err) => showCustomToast(err)
+      baseUrl: 'https://api.example.com',  // 可选：设置基础 URL
+      timeout: 10000,                      // 可选：请求超时时间
+      cacheStrategy: {
+        ttl: 5 * 60 * 1000,                // 默认缓存 5 分钟
+        shouldCache: (req) => req.method === 'GET'
+      },
+      retryStrategy: {
+        maxRetries: 2,                     // 默认重试 2 次
+        delay: (attempt) => attempt * 1000 // 每次延迟 1s
+      },
+      loadingStrategy: {
+        showLoading: (req) => !req.url.includes('/no-loading'),
+        onStart: () => console.log('Loading 开始'),
+        onEnd: () => console.log('Loading 结束')
+      },
+      errorStrategy: {
+        handleError: (err) => {
+          console.error('请求错误:', err);
+          // 可以在这里调用你的 Toast 服务
+        }
+      }
     })
   ]
-});
+};
+```
+
+### 2. 在 NgModule 应用中引入
+
+```typescript
+// app.module.ts
+import { HttpClientModule, HTTP_INTERCEPTORS } from '@angular/common/http';
+import { HttpEnhancedModule } from 'ngx-http-enhanced';
+import { 
+  deduplicateInterceptor, 
+  cacheInterceptor, 
+  retryInterceptor,
+  loadingInterceptor, 
+  errorInterceptor 
+} from 'ngx-http-enhanced';
+
+@NgModule({
+  imports: [
+    HttpClientModule,
+    HttpEnhancedModule.forRoot({
+      baseUrl: 'https://api.example.com',
+      retryStrategy: { maxRetries: 2 }
+    })
+  ],
+  providers: [
+    // 手动注册拦截器（注意顺序）
+    { provide: HTTP_INTERCEPTORS, useValue: deduplicateInterceptor, multi: true },
+    { provide: HTTP_INTERCEPTORS, useValue: cacheInterceptor, multi: true },
+    { provide: HTTP_INTERCEPTORS, useValue: retryInterceptor, multi: true },
+    { provide: HTTP_INTERCEPTORS, useValue: loadingInterceptor, multi: true },
+    { provide: HTTP_INTERCEPTORS, useValue: errorInterceptor, multi: true },
+  ]
+})
+export class AppModule {}
+```
 ```
 ## 2. 使用增强后的服务（推荐）
 ```typescript

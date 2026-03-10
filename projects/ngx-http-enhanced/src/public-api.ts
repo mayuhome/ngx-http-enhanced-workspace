@@ -13,4 +13,4 @@ export * from './lib/interceptors/cache.interceptor';
 export * from './lib/interceptors/deduplicate.interceptor';
 export * from './lib/interceptors/retry.interceptor';
 
-export { HTTP_ENHANCED_CONFIG } from './lib/core/http-enhanced.service';
+export * from './lib/core/enhanced-client.service';

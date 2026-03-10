@@ -41,24 +41,76 @@ pnpm add ngx-http-enhanced
 ```
 
 ## Quick Start
-### 1. Import in AppModule / Standalone
+
+### 1. Import in Standalone Application (Recommended)
+
 ```typescript
-// app.config.ts or app.module.ts
-import { provideHttpClient, withInterceptorsFromDi } from '@angular/common/http';
+// app.config.ts
 import { provideHttpEnhanced } from 'ngx-http-enhanced';
 
-bootstrapApplication(AppComponent, {
+export const appConfig: ApplicationConfig = {
   providers: [
-    provideHttpClient(withInterceptorsFromDi()),
+    // One line of code for all configuration, including HttpClient and all interceptors
     provideHttpEnhanced({
-      // Optional: global configuration
-      cacheTtl: 5 * 60 * 1000,      // Default cache 5 minutes
-      retryCount: 2,                // Default retry 2 times
-      // loadingStrategy: (req) => !req.url.includes('/no-loading'),
-      // errorHandler: (err) => showCustomToast(err)
+      baseUrl: 'https://api.example.com',  // Optional: set base URL
+      timeout: 10000,                      // Optional: request timeout
+      cacheStrategy: {
+        ttl: 5 * 60 * 1000,                // Default cache 5 minutes
+        shouldCache: (req) => req.method === 'GET'
+      },
+      retryStrategy: {
+        maxRetries: 2,                     // Default retry 2 times
+        delay: (attempt) => attempt * 1000 // Delay 1s each time
+      },
+      loadingStrategy: {
+        showLoading: (req) => !req.url.includes('/no-loading'),
+        onStart: () => console.log('Loading started'),
+        onEnd: () => console.log('Loading ended')
+      },
+      errorStrategy: {
+        handleError: (err) => {
+          console.error('Request error:', err);
+          // You can call your Toast service here
+        }
+      }
     })
   ]
-});
+};
+```
+
+### 2. Import in NgModule Application
+
+```typescript
+// app.module.ts
+import { HttpClientModule, HTTP_INTERCEPTORS } from '@angular/common/http';
+import { HttpEnhancedModule } from 'ngx-http-enhanced';
+import { 
+  deduplicateInterceptor, 
+  cacheInterceptor, 
+  retryInterceptor,
+  loadingInterceptor, 
+  errorInterceptor 
+} from 'ngx-http-enhanced';
+
+@NgModule({
+  imports: [
+    HttpClientModule,
+    HttpEnhancedModule.forRoot({
+      baseUrl: 'https://api.example.com',
+      retryStrategy: { maxRetries: 2 }
+    })
+  ],
+  providers: [
+    // Manually register interceptors (note the order)
+    { provide: HTTP_INTERCEPTORS, useValue: deduplicateInterceptor, multi: true },
+    { provide: HTTP_INTERCEPTORS, useValue: cacheInterceptor, multi: true },
+    { provide: HTTP_INTERCEPTORS, useValue: retryInterceptor, multi: true },
+    { provide: HTTP_INTERCEPTORS, useValue: loadingInterceptor, multi: true },
+    { provide: HTTP_INTERCEPTORS, useValue: errorInterceptor, multi: true },
+  ]
+})
+export class AppModule {}
+```
 ```
 ## 2. Use the enhanced service (recommended)
 ```typescript
